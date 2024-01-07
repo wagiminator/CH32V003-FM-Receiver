@@ -1,5 +1,5 @@
 # CH32V003 FM Radio Receiver with RDS
-With the portable Li-Ion battery powered FM radio receiver you can listen to your favourite radio station. This device is equipped with cost-effective components, including a CH32V003J4M6 32-bit RISC-V microcontroller, a RDA5807MP FM radio tuner IC, an audio amplifier (TC8871 or XPT8871), a 128x32 pixel OLED display (SSD1306), and a Li-Ion battery charger (TP4054 or MCP73831). You can directly connect a protected 3.7V LiPo battery, a 3W / 4Ω speaker, and an FM antenna. The FM Radio Receiver is a port form the [ATtiny412 version](https://github.com/wagiminator/ATtiny412-PocketRadio).
+With the portable Li-Ion battery powered FM radio receiver you can listen to your favourite radio station. This device is equipped with cost-effective components, including a CH32V003J4M6 32-bit RISC-V microcontroller, a RDA5807MP FM radio tuner IC, an audio amplifier (TC8871 or XPT8871), a 128x32 pixel OLED display (SSD1306), and a Li-Ion battery charger (TP4054 or MCP73831). You can directly connect a protected 3.7V LiPo battery, a 3W / 4Ω speaker, and an FM antenna. The FM Radio Receiver is a port from the [ATtiny412 version](https://github.com/wagiminator/ATtiny412-PocketRadio).
 
 ![FM_Radio_Receiver_pic1.jpg](https://raw.githubusercontent.com/wagiminator/CH32V003-FM-Receiver/main/documentation/FM_Radio_Receiver_pic1.jpg)
 
