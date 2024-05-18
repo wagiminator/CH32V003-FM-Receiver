@@ -1,5 +1,5 @@
 # ===================================================================================
-# Project:  CH32V003 FM Radio Receiver
+# Project:  CH32V003 Example
 # Author:   Stefan Wagner
 # Year:     2023
 # URL:      https://github.com/wagiminator    
@@ -14,7 +14,7 @@ INCLUDE  = include
 TOOLS    = tools
 
 # Microcontroller Settings
-F_CPU    = 3000000
+F_CPU    = 8000000
 LDSCRIPT = linker/ch32v003.ld
 CPUARCH  = -march=rv32ec -mabi=ilp32e
 
@@ -29,9 +29,9 @@ ISPTOOL  = python3 $(TOOLS)/rvprog.py -f $(TARGET).bin
 CLEAN    = rm -f *.lst *.obj *.cof *.list *.map *.eep.hex *.o *.d
 
 # Compiler Flags
-CFLAGS   = -g -Os -flto -ffunction-sections -fno-builtin -nostdlib -Wall
-CFLAGS  += $(CPUARCH) -DF_CPU=$(F_CPU) -I$(NEWLIB) -I$(INCLUDE) -I.
-LDFLAGS  = -T$(LDSCRIPT) -L$(INCLUDE) -lgcc -Wl,--gc-sections
+CFLAGS   = -g -Os -flto -ffunction-sections -fdata-sections -fno-builtin -nostdlib
+CFLAGS  += $(CPUARCH) -DF_CPU=$(F_CPU) -I$(NEWLIB) -I$(INCLUDE) -I. -Wall
+LDFLAGS  = -T$(LDSCRIPT) -L$(INCLUDE)/libgcc -lgcc -Wl,--gc-sections
 CFILES   = $(MAINFILE) $(wildcard $(INCLUDE)/*.c) $(wildcard $(INCLUDE)/*.S)
 
 # Symbolic Targets

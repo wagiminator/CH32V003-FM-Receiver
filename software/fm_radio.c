@@ -1,6 +1,6 @@
 // ===================================================================================
 // Project:   FM Radio Receiver with RDS based on CH32V003 and RDA5807MP
-// Version:   v1.0
+// Version:   v1.1
 // Year:      2023
 // Author:    Stefan Wagner
 // Github:    https://github.com/wagiminator
@@ -52,16 +52,63 @@
 // ===================================================================================
 // Libraries, Definitions and Macros
 // ===================================================================================
-#include <config.h>                         // user configuration
-#include <system.h>                         // system functions
-#include <gpio.h>                           // GPIO functions
-#include <oled.h>                           // OLED functions
-#include <rda5807.h>                        // RDA 5807 functions
-#include <i2c_soft.h>                       // I2C functions
 
-// ADC check supply voltage; return "TRUE" if battery is weak
-uint8_t BAT_isWeak(void) {
-  return(ADC_read() > 384);                 // true if VCC < 3.2V (384=1023*1.2V/3.2V)
+// Libraries
+#include <config.h>                         // user configuration
+#include <gpio.h>                           // GPIO functions
+#include <oled_gfx.h>                       // OLED functions
+#include <rda5807.h>                        // RDA 5807 functions
+
+// Global Variables
+uint8_t volume = RDA_INIT_VOL;              // current volume (0..15)
+
+// ===================================================================================
+// OLED Symbols
+// ===================================================================================
+const uint8_t BAT_OK[] = {
+  0x7C, 0x04, 0x07, 0x01, 0x07, 0x84, 0xDC, 0x73, 0x46, 0x4C, 0x46, 0x43, 0x41, 0x7C
+};
+
+const uint8_t BAT_WEAK[] = {
+  0x34, 0x64, 0xC7, 0x81, 0xC7, 0x64, 0x34, 0x58, 0x4C, 0x46, 0x43, 0x46, 0x4C, 0x58
+};
+
+const uint8_t ANT_BIG[] = {
+  0x03, 0x0C, 0x30, 0xFF, 0x30, 0x0C, 0x03, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x00, 0x00
+};
+
+const uint8_t ANT[] = {
+  0x01, 0x02, 0x04, 0x7F, 0x04, 0x02, 0x01
+};
+
+// ===================================================================================
+// OLED Update Function
+// ===================================================================================
+void OLED_update(void) {
+  RDA_updateStatus();
+
+  OLED_clear();
+  OLED_print(0, 0, RDA_stationName, 1, OLED_SMOOTH);
+  OLED_drawBitmap(121, 0, 7, 16, PVD_isLow() ? BAT_WEAK : BAT_OK);
+
+  OLED_printSegment(-10, 20, RDA_getFrequency(), 5, 1, 2);
+  OLED_print(94, 36, "MHz", 1, OLED_SMOOTH);
+
+  OLED_drawBitmap(94, 20, 7, 8, ANT);
+  OLED_drawRect(104, 20, 24, 7, 1);
+  uint8_t strength = RDA_signalStrength;
+  if(strength > 64) strength = 64;
+  strength = (strength >> 2) + (strength >> 3);
+  if(strength) OLED_fillRect(104, 20, strength, 7, 1);
+
+  OLED_print(0, 56, "Volume:", 1, 1);
+  OLED_drawRect(50, 56, 78, 7, 1);
+  uint8_t xpos = 47;
+  uint8_t vol  = volume;
+  while(vol--) OLED_fillRect(xpos+=5, 58, 4, 3, 1);
+
+  OLED_home(0, 0);
+  OLED_refresh();
 }
 
 // ===================================================================================
@@ -69,53 +116,32 @@ uint8_t BAT_isWeak(void) {
 // ===================================================================================
 int main(void) {
   // Variables
-  uint8_t volume = RDA_INIT_VOL;
+  uint8_t CH_UP_state = 0;                  // CH+ button state
 
   // Setup
   PIN_input_PU(PIN_VOL_UP);                 // enable pullups for button pins
   PIN_input_PU(PIN_VOL_DOWN);
   PIN_input_PU(PIN_CH_UP);
-  ADC_init();                               // setup ADC
-  ADC_input_VREF();                         // internal reference as ADC input
+  PVD_set_3V15();                           // supply voltage detection level 3.15V
+  PVD_enable();                             // enable programmable voltage detector
   I2C_init();                               // init I2C
   OLED_init();                              // setup OLED
-
-  // Print start info
-  OLED_clearScreen();
-  OLED_println(OLED_HEADER);
-  OLED_print("Starting ...");
 
   // Start the tuner
   RDA_init();
   RDA_setChannel((uint16_t)((RDA_INIT_FREQ - 87.0) * 10) + 1);
-  RDA_waitTuning();
 
   // Loop
   while(1) {
     // Update information on OLED
-    RDA_updateStatus();
-    OLED_setCursor(0, 1);
-    OLED_print("Station:  ");
-    OLED_println(RDA_stationName);
-    OLED_print("Vol: ");
-    OLED_printVal(volume, 2, 0);
-    OLED_print("   Frq: ");
-    OLED_printVal(RDA_getFrequency(), 5, 2);
-    OLED_print("Sig: ");
-    OLED_printVal(RDA_signalStrength, 2, 0);
-    OLED_print("   Bat: ");
-    if(BAT_isWeak()) OLED_println("weak");
-    else             OLED_println("OK");
+    OLED_update();
 
     // Check CH+ button
     if(!PIN_read(PIN_CH_UP)) {
-      OLED_setCursor(0, 1);
-      OLED_println("Tuning ...");
-      OLED_clearLine(); OLED_clearLine();
-      RDA_seekUp();
-      RDA_waitTuning();
-      while(!PIN_read(PIN_CH_UP));
+      if(!CH_UP_state) RDA_seekUp();
+      DLY_ms(20);
     }
+    CH_UP_state = !PIN_read(PIN_CH_UP);
 
     // Check VOL+ button
     if(!PIN_read(PIN_VOL_UP)) {

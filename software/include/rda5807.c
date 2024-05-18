@@ -1,5 +1,5 @@
 // ===================================================================================
-// RDA5807 Basic Functions                                                    * v1.0 *
+// RDA5807 Basic Functions                                                    * v1.1 *
 // ===================================================================================
 // 2022 by Stefan Wagner:   https://github.com/wagiminator
 
@@ -11,7 +11,7 @@ uint16_t RDA_write_regs[6] = {                    // RDA registers for writing:
   0b1101001000001101,                             // RDA register 0x02 preset
   0b0001010111000000,                             // RDA register 0x03 preset
   0b0000101000000000,                             // RDA register 0x04 preset
-  0b1000100010000000,                             // RDA register 0x05 preset
+  0b1000100010000000 | RDA_INIT_VOL,              // RDA register 0x05 preset
   0b0000000000000000,                             // RDA register 0x06 preset
   0b0000000000000000                              // RDA register 0x07 preset
 };
@@ -19,10 +19,11 @@ uint16_t RDA_write_regs[6] = {                    // RDA registers for writing:
 // RDA variables
 char RDA_stationName[9];                          // string for the station name
 char RDA_rdsStationName[8];                       // just for internal use
+const char RDA_header[9] = RDA_HEADER;            // default station name
 
 // RDA write specified register
 void RDA_writeReg(uint8_t reg) {
-  I2C_start(RDA_ADDR_INDEX);                      // start I2C for index write to RDA
+  I2C_start((RDA_ADDR_INDEX << 1) | 0);           // start I2C for index write to RDA
   I2C_write(0x02 + reg);                          // set the register to write
   I2C_write(RDA_write_regs[reg] >> 8);            // send high byte
   I2C_write(RDA_write_regs[reg]);                 // send low byte
@@ -31,7 +32,7 @@ void RDA_writeReg(uint8_t reg) {
 
 // RDA write all registers
 void RDA_writeAllRegs(void) {
-  I2C_start(RDA_ADDR_SEQ);                        // start I2C for sequential write to RDA
+  I2C_start((RDA_ADDR_SEQ << 1) | 0);             // start I2C for sequential write to RDA
   for(uint8_t i=0; i<6; i++) {                    // write to 6 registers
     I2C_write(RDA_write_regs[i] >> 8);            // send high byte
     I2C_write(RDA_write_regs[i]);                 // send low byte
@@ -41,7 +42,7 @@ void RDA_writeAllRegs(void) {
 
 // RDA read all registers
 void RDA_readAllRegs(void) {
-  I2C_start(RDA_ADDR_SEQ | 1);                    // start I2C for sequential read from RDA
+  I2C_start((RDA_ADDR_SEQ << 1) | 1);             // start I2C for sequential read from RDA
   for(uint8_t i=0; i<6; i++)                      // read 6 registers
     RDA_read_regs[i] = (uint16_t)(I2C_read(1) << 8) | I2C_read(5-i);
   I2C_stop();                                     // stop I2C
@@ -49,17 +50,19 @@ void RDA_readAllRegs(void) {
 
 // RDA clear station
 void RDA_resetStation(void) {
-  for(uint8_t i=0; i<8; i++) RDA_stationName[i] = ' ';
+  for(uint8_t i=0; i<8; i++) RDA_stationName[i] = RDA_header[i];
 }
 
 // RDA initialize tuner
 void RDA_init(void) {
+  #if RDA_INIT_I2C > 0
+  I2C_init();                                     // initialize I2C first
+  #endif
   RDA_resetStation();                             // reset station available
   RDA_stationName[8] = 0;                         // set string terminator
   RDA_write_regs[RDA_REG_2] |=  0x0002;           // set soft reset
   RDA_writeReg(RDA_REG_2);                        // write to register 0x02
   RDA_write_regs[RDA_REG_2] &= ~0x0002;           // clear soft reset
-  RDA_write_regs[RDA_REG_5] |=  RDA_INIT_VOL;     // set start volume
   RDA_writeAllRegs();                             // write all registers
 }
 

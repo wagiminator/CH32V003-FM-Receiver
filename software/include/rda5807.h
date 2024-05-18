@@ -1,5 +1,5 @@
 // ===================================================================================
-// RDA5807 Basic Functions                                                    * v1.0 *
+// RDA5807 Basic Functions                                                    * v1.1 *
 // ===================================================================================
 //
 // Basic functions for the RDA5807 digital stereo FM tuner IC.
@@ -25,17 +25,22 @@
 extern "C" {
 #endif
 
-#include "system.h"
-#include "i2c_soft.h"
 #include "config.h"
+#include "system.h"
+#include "i2c.h"                      // choose your I2C library
+
+// RDA parameters
+#define RDA_INIT_I2C    0             // init I2C with RDA_init()
+#ifndef RDA_INIT_VOL
+#define RDA_INIT_VOL    3             // volume on system start (0..15)
+#endif
+#ifndef RDA_HEADER
+#define RDA_HEADER      "FM Radio"    // default station name (8 characters)
+#endif
 
 // RDA definitions
-#define RDA_ADDR_SEQ    0x20          // RDA I2C write address for sequential access
-#define RDA_ADDR_INDEX  0x22          // RDA I2C write address for indexed access
-
-#ifndef RDA_INIT_VOL
-#define RDA_INIT_VOL    1             // start volume (0..15)
-#endif
+#define RDA_ADDR_SEQ    0x10          // RDA5807 I2C device address for sequential access
+#define RDA_ADDR_INDEX  0x11          // RDA5807 I2C device address for indexed access
 
 // RDA state macros
 #define RDA_hasRdsData        ( RDA_read_regs[RDA_REG_A] & 0x8000 )
