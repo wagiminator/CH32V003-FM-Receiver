@@ -122,8 +122,8 @@ int main(void) {
   PIN_input_PU(PIN_VOL_UP);                 // enable pullups for button pins
   PIN_input_PU(PIN_VOL_DOWN);
   PIN_input_PU(PIN_CH_UP);
-  PVD_set_3V15();                           // supply voltage detection level 3.15V
   PVD_enable();                             // enable programmable voltage detector
+  PVD_set_3V15();                           // supply voltage detection level 3.15V
   I2C_init();                               // init I2C
   OLED_init();                              // setup OLED
 
