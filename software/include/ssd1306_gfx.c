@@ -1,9 +1,9 @@
 // ===================================================================================
-// SSD1306 I2C OLED Graphics Functions                                        * v1.4 *
+// SSD1306/SH1106 I2C OLED Graphics Functions                                 * v1.6 *
 // ===================================================================================
 // 2024 by Stefan Wagner:   https://github.com/wagiminator
 
-#include "oled_gfx.h"
+#include "ssd1306_gfx.h"
 
 // ===================================================================================
 // Screen Buffer
@@ -61,7 +61,7 @@ const uint8_t OLED_FONT[] = {
 // 13x32 7-Segment Font (0 - 9)
 // ===================================================================================
 #if OLED_SEG_FONT == 1
-const uint8_t OLED_FONT_SEG1[] = {
+const uint8_t OLED_FONT_SEG[] = {
   0xFC, 0xF9, 0xF3, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0xF3, 0xF9, 0xFC, // 0
   0x7F, 0x3F, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x3F, 0x7F, 
   0xFF, 0xFE, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFC, 0xFE, 0xFF, 
@@ -109,17 +109,17 @@ const uint8_t OLED_FONT_SEG1[] = {
 // 5x16 7-Segment Font (0 - 9)
 // ===================================================================================
 #if OLED_SEG_FONT == 2
-const uint8_t OLED_FONT_SEG2[] = {
-  0x7C, 0x02, 0x02, 0x02, 0x7C, 0x1F, 0x20, 0x20, 0x20, 0x1F, // 0  0
-  0x00, 0x00, 0x00, 0x00, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x1F, // 1  1
-  0x00, 0x82, 0x82, 0x82, 0x7C, 0x1F, 0x20, 0x20, 0x20, 0x00, // 2  2
-  0x00, 0x82, 0x82, 0x82, 0x7C, 0x00, 0x20, 0x20, 0x20, 0x1F, // 3  3
-  0x7C, 0x80, 0x80, 0x80, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x1F, // 4  4
-  0x7C, 0x82, 0x82, 0x82, 0x00, 0x00, 0x20, 0x20, 0x20, 0x1F, // 5  5
-  0x7C, 0x82, 0x82, 0x82, 0x00, 0x1F, 0x20, 0x20, 0x20, 0x1F, // 6  6
-  0x7C, 0x02, 0x02, 0x02, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x1F, // 7  7
-  0x7C, 0x82, 0x82, 0x82, 0x7C, 0x1F, 0x20, 0x20, 0x20, 0x1F, // 8  8
-  0x7C, 0x82, 0x82, 0x82, 0x7C, 0x00, 0x20, 0x20, 0x20, 0x1F  // 9  9
+const uint8_t OLED_FONT_SEG[] = {
+  0x7C, 0x02, 0x02, 0x02, 0x7C, 0x1F, 0x20, 0x20, 0x20, 0x1F, // 0
+  0x00, 0x00, 0x00, 0x00, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x1F, // 1
+  0x00, 0x82, 0x82, 0x82, 0x7C, 0x1F, 0x20, 0x20, 0x20, 0x00, // 2
+  0x00, 0x82, 0x82, 0x82, 0x7C, 0x00, 0x20, 0x20, 0x20, 0x1F, // 3
+  0x7C, 0x80, 0x80, 0x80, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x1F, // 4
+  0x7C, 0x82, 0x82, 0x82, 0x00, 0x00, 0x20, 0x20, 0x20, 0x1F, // 5
+  0x7C, 0x82, 0x82, 0x82, 0x00, 0x1F, 0x20, 0x20, 0x20, 0x1F, // 6
+  0x7C, 0x02, 0x02, 0x02, 0x7C, 0x00, 0x00, 0x00, 0x00, 0x1F, // 7
+  0x7C, 0x82, 0x82, 0x82, 0x7C, 0x1F, 0x20, 0x20, 0x20, 0x1F, // 8
+  0x7C, 0x82, 0x82, 0x82, 0x7C, 0x00, 0x20, 0x20, 0x20, 0x1F  // 9
 };
 #endif
 
@@ -127,23 +127,36 @@ const uint8_t OLED_FONT_SEG2[] = {
 // OLED Control Functions
 // ===================================================================================
 
+// Screen offsets
+#if OLED_SH1106 == 1
+  #define OLED_XOFF ((128 - OLED_WIDTH) / 2) + 2
+#else
+  #define OLED_XOFF ((128 - OLED_WIDTH) / 2)
+#endif
+#define OLED_YOFF 0
+
 // OLED initialisation sequence
 const uint8_t OLED_INIT_CMD[] = {
   OLED_MULTIPLEX,  OLED_HEIGHT - 1,               // set multiplex ratio
   OLED_CHARGEPUMP, 0x14,                          // set DC-DC enable  
   OLED_MEMORYMODE, 0x00,                          // set horizontal addressing mode
-  OLED_COLUMNS,    0, OLED_WIDTH - 1,             // set start and end column
-  OLED_PAGES,      0, OLED_HEIGHT - 1,            // set start and end page
+  #if OLED_SH1106 == 0 && OLED_WIDTH != 64
+  OLED_COLUMNS, OLED_XOFF, OLED_XOFF + OLED_WIDTH  - 1, // set start and end column
+  OLED_PAGES,   OLED_YOFF, OLED_YOFF + OLED_HEIGHT - 1, // set start and end page
+  #endif
   #if OLED_WIDTH == 128 && OLED_HEIGHT == 32
   OLED_COMPINS,    0x02,                          // set com pins
   #else
   OLED_COMPINS,    0x12,                          // set com pins
   #endif
-  #if OLED_FLIP_SCREEN > 0
-  OLED_XFLIP, OLED_YFLIP,                         // flip screen
+  #if OLED_XFLIP > 0
+  OLED_XFLIP_ON,                                  // flip screen in X-direction
   #endif
-  #ifdef OLED_BRIGHTNESS
-  OLED_CONTRAST, OLED_BRIGHTNESS,
+  #if OLED_YFLIP > 0
+  OLED_YFLIP_ON,                                  // flip screen in Y-direction
+  #endif
+  #if OLED_INVERT > 0
+  OLED_INVERT_ON,                                 // invert screen
   #endif
   OLED_DISPLAY_ON                                 // display on
 };
@@ -183,7 +196,7 @@ void OLED_contrast(uint8_t val) {
 void OLED_invert(uint8_t val) {
   I2C_start(OLED_ADDR << 1);                      // start transmission to OLED
   I2C_write(OLED_CMD_MODE);                       // set command mode
-  I2C_write(val ? OLED_INVERT : OLED_INVERT_OFF); // set invert mode
+  I2C_write(val ? OLED_INVERT_ON : OLED_INVERT_OFF); // set invert mode
   I2C_stop();                                     // stop transmission
 }
 
@@ -191,8 +204,8 @@ void OLED_invert(uint8_t val) {
 void OLED_flip(uint8_t xflip, uint8_t yflip) {
   I2C_start(OLED_ADDR << 1);                      // start transmission to OLED
   I2C_write(OLED_CMD_MODE);                       // set command mode
-  I2C_write(xflip ? OLED_XFLIP : OLED_XFLIP_OFF); // set x-flip
-  I2C_write(yflip ? OLED_YFLIP : OLED_YFLIP_OFF); // set y-flip
+  I2C_write(xflip ? OLED_XFLIP_ON : OLED_XFLIP_OFF); // set x-flip
+  I2C_write(yflip ? OLED_YFLIP_ON : OLED_YFLIP_OFF); // set y-flip
   I2C_stop();                                     // stop transmission
 }
 
@@ -205,7 +218,7 @@ void OLED_vscroll(uint8_t y) {
   I2C_stop();                                     // stop transmission
 }
 
-// Set home postition (should be 0,0)
+// Set home postition
 void OLED_home(uint8_t x, uint8_t y) {
   I2C_start(OLED_ADDR << 1);                      // start transmission to OLED
   I2C_write(OLED_CMD_MODE);                       // set command mode
@@ -223,9 +236,21 @@ void OLED_refresh(void) {
   OLED_sendbuffer = temp;
   #endif
 
+  #if OLED_SH1106 == 1 || OLED_WIDTH == 64
+  uint8_t* buffer = OLED_sendbuffer;
+  for(uint8_t y=0; y<OLED_HEIGHT; y+=8) {         // each page must be transmitted individually
+    OLED_home(OLED_XOFF, OLED_YOFF + y);          // set page
+    I2C_start(OLED_ADDR << 1);                    // start transmission to OLED
+    I2C_write(OLED_DAT_MODE);                     // set command mode
+    I2C_writeBuffer(buffer, OLED_WIDTH);          // transmit page
+    buffer += OLED_WIDTH;                         // increase buffer pointer
+  }
+  #else
+  OLED_home(OLED_XOFF, OLED_YOFF);                // set start address
   I2C_start(OLED_ADDR << 1);                      // start transmission to OLED
   I2C_write(OLED_DAT_MODE);                       // set command mode
   I2C_writeBuffer(OLED_sendbuffer, sizeof(OLED_buffer)); // send screen buffer using DMA
+  #endif
 }
 
 // ===================================================================================
@@ -430,26 +455,23 @@ void OLED_drawSprite(int16_t x0, int16_t y0, int16_t w, int16_t h, const uint8_t
 // OLED Text Functions
 // ===================================================================================
 
-// Draw character (c) at position (x,y), color, size
-void OLED_drawChar(int16_t x, int16_t y, char c, uint8_t color, uint8_t size) {
-  uint16_t ptr = c - 32;
-  ptr += ptr << 2;
-  for(uint8_t i=6; i; i--) {
-    uint8_t line, col;
-    int16_t y1 = y;
-    line = OLED_FONT[ptr++];
-    if(i == 1) line = 0;
-    for(uint8_t j=0; j<8; j++, line>>=1) {
-      if(line & 1) col = color;
-      else col = !color;
-      if(size == 1) OLED_setPixel(x, y1++, col);
-      else {
-        OLED_fillRect(x, y1, size, size, col);
-        y1 += size;
-      }
-    }
-    x += size;
-  }
+// Variables
+int16_t OLED_cx, OLED_cy;                           // cursor position
+uint8_t OLED_ci, OLED_cs = 1;                       // inversion and size
+
+// Set cursor position
+void OLED_cursor(int16_t x, int16_t y) {
+  OLED_cx = x; OLED_cy = y;
+}
+
+// Set text size
+void OLED_textsize(uint8_t size) {
+  OLED_cs = size;
+}
+
+// OLED set text invert
+void OLED_textinvert(uint8_t yes) {
+  OLED_ci = yes;
 }
 
 // Converts bit pattern abcdefgh into aabbccddeeffgghh
@@ -460,75 +482,99 @@ uint16_t OLED_stretch(uint16_t x) {
   return x | x<<1;
 }
 
-// Draw character (c) at position (x,y), color, double-size, smoothed
-// (David Johnson-Davies' Smooth Big Text algorithm)
-void OLED_smoothChar(int16_t x, int16_t y, char c, uint8_t color) {
-  uint16_t ptr = c - 32;
-  ptr += ptr << 2;
-  uint16_t col0L, col0R, col1L, col1R;
-  uint8_t col0 = OLED_FONT[ptr++];
-  col0L = OLED_stretch(col0);
-  col0R = col0L;
-  for(uint8_t col=5; col; col--) {
-    uint8_t col1 = OLED_FONT[ptr++];
-    if(col == 1) col1 = 0;
-    col1L = OLED_stretch(col1);
-    col1R = col1L;    
-    for(int8_t i=6; i>=0; i--) {
-      for(int8_t j=1; j<3; j++) {
-        if(((col0>>i & 0b11) == (3 - j)) && ((col1>>i & 0b11) == j)) {
-          col0R = col0R | 1<<((i << 1) + j);
-          col1L = col1L | 1<<((i << 1) + 3 - j);
+// Write a character
+void OLED_write(char c) {
+  c &= 0x7f;
+  if(c >= 32) {
+    uint16_t ptr = c - 32;
+    ptr += ptr << 2;
+
+    // Standard character, if necessary enlarged
+    if(OLED_cs <= 8) {
+      for(uint8_t i=6; i; i--) {
+        uint8_t line, col;
+        int16_t y1 = OLED_cy;
+        line = OLED_FONT[ptr++];
+        if(i == 1) line = 0;
+        if(OLED_ci) line = ~line;
+        for(uint8_t j=0; j<8; j++, line>>=1) {
+          col = line & 1;
+          if(OLED_cs == 1) OLED_setPixel(OLED_cx, y1++, col);
+          else {
+            OLED_fillRect(OLED_cx, y1, OLED_cs, OLED_cs, col);
+            y1 += OLED_cs;
+          }
         }
+        OLED_cx += OLED_cs;
       }
+      return;
     }
-    int16_t y1 = y;
-    if(!color) {
-      col0L = ~col0L;
-      col0R = ~col0R;
+
+    // Double-sized, smoothed character (10x16, David Johnson-Davies' Smooth Big Text algorithm)
+    if(OLED_cs == OLED_SMOOTH) {
+      uint16_t col0L, col0R, col1L, col1R;
+      uint8_t col0 = OLED_FONT[ptr++];
+      col0L = OLED_stretch(col0);
+      col0R = col0L;
+      for(uint8_t col=5; col; col--) {
+        uint8_t col1 = OLED_FONT[ptr++];
+        if(col == 1) col1 = 0;
+        col1L = OLED_stretch(col1);
+        col1R = col1L;    
+        for(int8_t i=6; i>=0; i--) {
+          for(int8_t j=1; j<3; j++) {
+            if(((col0>>i & 0b11) == (3 - j)) && ((col1>>i & 0b11) == j)) {
+              col0R = col0R | 1<<((i << 1) + j);
+              col1L = col1L | 1<<((i << 1) + 3 - j);
+            }
+          }
+        }
+        int16_t y1 = OLED_cy;
+        if(OLED_ci) {
+          col0L = ~col0L;
+          col0R = ~col0R;
+        }
+        for(int8_t i=16; i; i--, col0L>>=1, col0R>>=1) {
+          OLED_setPixel(OLED_cx,   y1,   col0L & 1);
+          OLED_setPixel(OLED_cx+1, y1++, col0R & 1);
+        }
+        col0 = col1; col0L = col1L; col0R = col1R; OLED_cx += 2;
+      }
+      OLED_fillRect(OLED_cx, OLED_cy, 2, 16, OLED_ci);
+      OLED_cx += 2;
+      return;
     }
-    for(int8_t i=16; i; i--, col0L>>=1, col0R>>=1) {
-      OLED_setPixel(x,   y1,   col0L & 1);
-      OLED_setPixel(x+1, y1++, col0R & 1);
+
+    // V-stretched character (5x16)
+    for(uint8_t col=6; col; col--) {
+      uint8_t col0 = OLED_FONT[ptr++];
+      if(col == 1) col0 = 0;
+      if(OLED_ci) col0 = ~col0;
+      int16_t y1 = OLED_cy;
+      for(uint8_t i=8; i; i--, col0>>=1) {
+        OLED_setPixel(OLED_cx, y1++, col0 & 1);
+        OLED_setPixel(OLED_cx, y1++, col0 & 1);
+      }
+      OLED_cx++;
     }
-    col0 = col1; col0L = col1L; col0R = col1R; x += 2;
+    return;
   }
-  OLED_fillRect(x, y, 2, 16, !color);
+
+  // New line
+  if(c == '\n') {
+    OLED_cx = 0;
+    if(OLED_cs <= 8) OLED_cy += OLED_cs << 3;
+    else OLED_cy += 16;
+    return;
+  }
+
+  // Carriage return
+  if(c == '\r') OLED_cx = 0;
 }
 
-// Draw character (c) at position (x,y), color, v-stretched
-void OLED_stretchChar(int16_t x, int16_t y, char c, uint8_t color) {
-  uint16_t ptr = c - 32;
-  ptr += ptr << 2;
-  for(uint8_t col=6; col; col--) {
-    uint8_t col0 = OLED_FONT[ptr++];
-    if(col == 1) col0 = 0;
-    if(!color) col0 = ~col0;
-    int16_t y1 = y;
-    for(uint8_t i=8; i; i--, col0>>=1) {
-      OLED_setPixel(x, y1++, col0 & 1);
-      OLED_setPixel(x, y1++, col0 & 1);
-    }
-    x++;
-  }
-}
-
-// Print string (str) at position (x,y), color, size
-void OLED_print(int16_t x, int16_t y, char* str, uint8_t color, uint8_t size) {
-  while(*str) {
-    if(size <= 8) {
-      OLED_drawChar(x, y, *str++, color, size);
-      x += ((size << 2) + (size << 1));
-      continue;
-    }
-    if(size == OLED_SMOOTH) {
-      OLED_smoothChar(x, y, *str++, color);
-      x += 12;
-      continue;
-    }
-    OLED_stretchChar(x, y, *str++, color);
-    x += 6;
-  }
+// Print string (str)
+void OLED_print(char* str) {
+  while(*str) OLED_write(*str++);
 }
 
 // ===================================================================================
@@ -536,8 +582,7 @@ void OLED_print(int16_t x, int16_t y, char* str, uint8_t color, uint8_t size) {
 // ===================================================================================
 
 // Print value as 7-segment digits (BCD conversion by substraction method)
-#if OLED_SEG_FONT > 0
-void OLED_printSegment(int16_t x, int16_t y, uint16_t value, uint8_t digits, uint8_t lead, uint8_t decimal) {
+void OLED_printSegment(uint16_t value, uint8_t digits, uint8_t lead, uint8_t decimal) {
   static const uint16_t DIVIDER[] = {1, 10, 100, 1000, 10000};
   uint8_t leadflag = 0;                           // flag for leading spaces
   while(digits--) {                               // for all digits digits
@@ -550,71 +595,35 @@ void OLED_printSegment(int16_t x, int16_t y, uint16_t value, uint8_t digits, uin
     }
     if(digits == decimal) leadflag++;             // end leading characters before decimal
     if(leadflag || !lead) {
+      #if OLED_SEG_FONT == 0
+      OLED_write(digitval + '0');
+      #elif OLED_SEG_FONT == 1
       uint16_t ptr = (uint16_t)digitval;          // character pointer
-      #if OLED_SEG_FONT == 1
       ptr = (ptr << 5) + (ptr << 4) + (ptr << 2); // -> ptr = c * 13 * 4;
-      OLED_drawBitmap(x, y, 13, 32, (uint8_t*)&OLED_FONT_SEG1[ptr]);
+      OLED_drawBitmap(OLED_cx, OLED_cy, 13, 32, (uint8_t*)&OLED_FONT_SEG[ptr]);
       #elif OLED_SEG_FONT == 2
+      uint16_t ptr = (uint16_t)digitval;          // character pointer
       ptr = (ptr << 3) + (ptr << 1);              // -> ptr = c * 5 * 2;
-      OLED_drawBitmap(x, y, 5, 16, (uint8_t*)&OLED_FONT_SEG2[ptr]);
+      OLED_drawBitmap(OLED_cx, OLED_cy, 5, 16, (uint8_t*)&OLED_FONT_SEG[ptr]);
       #endif
     }
-    #if OLED_SEG_FONT == 1
-    x += OLED_SEG_SPACE + 13;
+    #if OLED_SEG_FONT == 0
+    else OLED_write(' ');
+    #elif OLED_SEG_FONT == 1
+    OLED_cx += OLED_SEG_SPACE + 13;
     #elif OLED_SEG_FONT == 2
-    x += OLED_SEG_SPACE + 5;
+    OLED_cx += OLED_SEG_SPACE + 5;
     #endif
     if(decimal && (digits == decimal)) {
-      #if OLED_SEG_FONT == 1
-      OLED_fillRect(x, y + 28, 3, 3, 1);          // print decimal point
-      x += OLED_SEG_SPACE + 3;
+      #if OLED_SEG_FONT == 0
+      OLED_write('.');
+      #elif OLED_SEG_FONT == 1
+      OLED_fillRect(OLED_cx, OLED_cy + 28, 3, 3, 1);  // print decimal point
+      OLED_cx += OLED_SEG_SPACE + 3;
       #elif OLED_SEG_FONT == 2
-      OLED_fillRect(x, y + 12, 2, 2, 1);          // print decimal point
-      x += OLED_SEG_SPACE + 2;
+      OLED_fillRect(OLED_cx, OLED_cy + 12, 2, 2, 1);  // print decimal point
+      OLED_cx += OLED_SEG_SPACE + 2;
       #endif
     }
   }
 }
-#endif  // OLED_SEG_FONT > 0
-
-// ===================================================================================
-// printf Extension
-// ===================================================================================
-
-#if OLED_PRINT == 1
-
-// Variables
-int16_t OLED_cx, OLED_cy;                           // cursor position
-uint8_t OLED_cc, OLED_cs;                           // color and size
-
-// Set cursor position, color and size
-void OLED_cursor(int16_t x, int16_t y, uint8_t color, uint8_t size) {
-  OLED_cx = x; OLED_cy = y; OLED_cc = color; OLED_cs = size;
-}
-
-// Write a character (for printf)
-void OLED_write(char c) {
-  c &= 0x7f;
-  if(c >= 32) {
-    if(OLED_cs <= 8) {
-      OLED_drawChar(OLED_cx, OLED_cy, c, OLED_cc, OLED_cs);
-      OLED_cx += ((OLED_cs << 2) + (OLED_cs << 1));
-      return;
-    }
-    if(OLED_cs == OLED_SMOOTH) {
-      OLED_smoothChar(OLED_cx, OLED_cy, c, OLED_cc);
-      OLED_cx += 12;
-      return;
-    }
-    OLED_stretchChar(OLED_cx, OLED_cy, c, OLED_cc);
-    OLED_cx += 6;
-    return;
-  }
-  if(c == '\n') {
-    OLED_cx = 0;
-    if(OLED_cs <= 8) OLED_cy += OLED_cs << 3;
-    else OLED_cy += 16;
-  }
-}
-
-#endif

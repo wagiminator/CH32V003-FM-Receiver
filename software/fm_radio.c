@@ -1,6 +1,6 @@
 // ===================================================================================
 // Project:   FM Radio Receiver with RDS based on CH32V003 and RDA5807MP
-// Version:   v1.1
+// Version:   v1.2
 // Year:      2023
 // Author:    Stefan Wagner
 // Github:    https://github.com/wagiminator
@@ -56,7 +56,7 @@
 // Libraries
 #include <config.h>                         // user configuration
 #include <gpio.h>                           // GPIO functions
-#include <oled_gfx.h>                       // OLED functions
+#include <ssd1306_gfx.h>                    // OLED functions
 #include <rda5807.h>                        // RDA 5807 functions
 
 // Global Variables
@@ -88,26 +88,25 @@ void OLED_update(void) {
   RDA_updateStatus();
 
   OLED_clear();
-  OLED_print(0, 0, RDA_stationName, 1, OLED_SMOOTH);
+  OLED_cursor(0, 0); OLED_textsize(OLED_SMOOTH); OLED_print(RDA_stationName);
   OLED_drawBitmap(121, 0, 7, 16, PVD_isLow() ? BAT_WEAK : BAT_OK);
 
-  OLED_printSegment(-10, 20, RDA_getFrequency(), 5, 1, 2);
-  OLED_print(94, 36, "MHz", 1, OLED_SMOOTH);
+  OLED_cursor(-10, 20); OLED_printSegment(RDA_getFrequency(), 5, 1, 2);
+  OLED_cursor(94, 36); OLED_print("MHz");
 
   OLED_drawBitmap(94, 20, 7, 8, ANT);
   OLED_drawRect(104, 20, 24, 7, 1);
   uint8_t strength = RDA_signalStrength;
   if(strength > 64) strength = 64;
-  strength = (strength >> 2) + (strength >> 3);
-  if(strength) OLED_fillRect(104, 20, strength, 7, 1);
+  strength = (strength >> 2) + (strength >> 4);
+  if(strength) OLED_fillRect(106, 22, strength, 3, 1);
 
-  OLED_print(0, 56, "Volume:", 1, 1);
+  OLED_cursor(0, 56); OLED_textsize(1); OLED_print("Volume:");
   OLED_drawRect(50, 56, 78, 7, 1);
   uint8_t xpos = 47;
   uint8_t vol  = volume;
   while(vol--) OLED_fillRect(xpos+=5, 58, 4, 3, 1);
 
-  OLED_home(0, 0);
   OLED_refresh();
 }
 
@@ -126,10 +125,13 @@ int main(void) {
   PVD_set_3V15();                           // supply voltage detection level 3.15V
   I2C_init();                               // init I2C
   OLED_init();                              // setup OLED
+  RDA_init();                               // setup RDA tuner
+  OLED_update();                            // draw screen
 
-  // Start the tuner
-  RDA_init();
-  RDA_setChannel((uint16_t)((RDA_INIT_FREQ - 87.0) * 10) + 1);
+  // Set initial frequency
+  RDA_setChannel((uint16_t)((RDA_INIT_FREQ - 87.0) * 10));
+  RDA_waitTuning();
+  RDA_seekUp();
 
   // Loop
   while(1) {
