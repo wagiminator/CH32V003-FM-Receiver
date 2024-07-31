@@ -23,6 +23,9 @@ For battery charging the TP4054 is used. The TP4054 is a complete constant-curre
 ## ME6209A33 3.3V Linear Voltage Regulator
 The ME6209 series are a group of positive voltage output, three–pin regulator, that provide a high current (max 250mA) even when the input/output voltage differential is small (80mV dropout voltage). Low power consumption (3µA quiescent current) and high accuracy (+/-2%) is achieved through CMOS technology. They allow input voltages as high as 18V.
 
+## SSD1306 OLED Display Module
+A low-cost SSD1306 4-pin I2C 128x64 pixels 0.96-inch OLED module is used as the display device. Make sure to acquire one with the correct pinout!
+
 ![FM_Radio_Receiver_pic2.jpg](https://raw.githubusercontent.com/wagiminator/CH32V003-FM-Receiver/main/documentation/FM_Radio_Receiver_pic2.jpg)
 
 # Building Instructions
@@ -56,6 +59,15 @@ To program the CH32V003 microcontroller, you will need a special programming dev
 
 ![CH32V003_wch-linke.jpg](https://raw.githubusercontent.com/wagiminator/Development-Boards/main/CH32V003F4P6_DevBoard/documentation/CH32V003_wch-linke.jpg)
 
+To use the WCH-LinkE on Linux, you need to grant access permissions beforehand by executing the following commands:
+```
+echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="8010", MODE="666"' | sudo tee /etc/udev/rules.d/99-WCH-LinkE.rules
+echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="8012", MODE="666"' | sudo tee -a /etc/udev/rules.d/99-WCH-LinkE.rules
+sudo udevadm control --reload-rules
+```
+
+On Windows, if you need to you can install the WinUSB driver over the WCH interface 1 using the [Zadig](https://zadig.akeo.ie/) tool.
+
 To upload the firmware, you need to ensure that the FM Receiver is switched off or the battery is removed. Then, you should make the following connections to the WCH-LinkE:
 
 ```
@@ -68,20 +80,14 @@ WCH-LinkE     FM Receiver
 ```
 
 If the blue LED on the WCH-LinkE remains illuminated once it is connected to the USB port, it means that the device is currently in ARM mode and must be switched to RISC-V mode initially. There are a few ways to accomplish this:
-- You can utilize the Python tool rvprog.py (with -v option), which is provided in the software/tools folder.
+- You can utilize the Python tool *rvprog.py* (with *-v* option), which is provided with the firmware in the *tools* folder.
 - Alternatively, you can select "WCH-LinkRV" in the software provided by WCH, such as MounRiver Studio or WCH-LinkUtility.
 - Another option is to hold down the ModeS button on the device while plugging it into the USB port.
 
 More information can be found in the [WCH-Link User Manual](http://www.wch-ic.com/downloads/WCH-LinkUserManual_PDF.html).
 
-## Compiling and Uploading Firmware (Linux)
-To use the WCH-LinkE on Linux, you need to grant access permissions beforehand by executing the following commands:
-```
-echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="8010", MODE="666"' | sudo tee /etc/udev/rules.d/99-WCH-LinkE.rules
-echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="8012", MODE="666"' | sudo tee -a /etc/udev/rules.d/99-WCH-LinkE.rules
-sudo udevadm control --reload-rules
-```
-
+## Compiling and Uploading Firmware using the Makefile
+### Linux
 Install the toolchain (GCC compiler, Python3, and PyUSB):
 ```
 sudo apt install build-essential libnewlib-dev gcc-riscv64-unknown-elf
@@ -89,24 +95,32 @@ sudo apt install python3 python3-pip
 python3 -m pip install pyusb
 ```
 
-Switch off the FM Receiver or remove the battery. Connect the FM Transmitter via the 3-pin PROG header to the WCH-LinkE programming device. Open a terminal and navigate to the folder with the makefile. Run the following command to compile and upload:
+Switch off the FM Receiver or remove the battery. Connect the FM Receiver via the 3-pin PROG header to the WCH-LinkE programming device. Open a terminal and navigate to the folder with the *makefile*. Run the following command to compile and upload:
 ```
 make flash
 ```
 
 If you want to just upload the pre-compiled binary, run the following command instead:
 ```
-python3 ./tools/rvprog.py -f fm_radio.bin
+python3 tools/rvprog.py -f bin/fm_radio.bin
 ```
 
-## Uploading Firmware Binary (Windows/Mac)
-WCH offers the free but closed-source software [WCH-LinkUtility](https://www.wch.cn/downloads/WCH-LinkUtility_ZIP.html) to upload the precompiled hex-file with Windows. Select the "WCH-LinkRV" mode in the software, open the fm_radio.hex file and upload it to the microcontroller.
+### Other Operating Systems
+Follow the instructions on [CNLohr's ch32v003fun page](https://github.com/cnlohr/ch32v003fun/wiki/Installation) to set up the toolchain on your respective operating system (for Windows, use WSL). Also, install [Python3](https://www.pythontutorial.net/getting-started/install-python/) and [pyusb](https://github.com/pyusb/pyusb). Compile and upload with "make flash". Note that I only have Debian-based Linux and have not tested it on other operating systems.
+
+## Compiling and Uploading Firmware using PlatformIO
+- Install [PlatformIO](https://platformio.org) and [platform-ch32v](https://github.com/Community-PIO-CH32V/platform-ch32v). Follow [these instructions](https://pio-ch32v.readthedocs.io/en/latest/installation.html) to do so. Linux/Mac users may also need to install [pyenv](https://realpython.com/intro-to-pyenv).
+- Click on "Open Project" and select the firmware folder with the *platformio.ini* file.
+- Switch off the FM Receiver or remove the battery. Connect the FM Receiver via the 3-pin PROG header to the WCH-LinkE programming device. Then click "Upload".
+
+## Uploading pre-compiled Firmware Binary
+WCH offers the free but closed-source software [WCH-LinkUtility](https://www.wch.cn/downloads/WCH-LinkUtility_ZIP.html) to upload the precompiled hex-file with Windows. Select the "WCH-LinkRV" mode in the software, open the *fm_radio.hex* file in the *bin* folder and upload it to the microcontroller.
 
 Alternatively, there is a platform-independent open-source tool called minichlink developed by Charles Lohr (CNLohr), which can be found [here](https://github.com/cnlohr/ch32v003fun/tree/master/minichlink). It can be used with Windows, Linux and Mac.
 
-If you have installed [Python3](https://www.pythontutorial.net/getting-started/install-python/) and [pyusb](https://github.com/pyusb/pyusb) on your system, you can also use the included Python tool rvprog.py:
+If you have installed [Python3](https://www.pythontutorial.net/getting-started/install-python/) and [pyusb](https://github.com/pyusb/pyusb) on your system, you can also use the included Python tool *rvprog.py*:
 ```
-python3 ./tools/rvprog.py -f fm_radio.bin
+python3 tools/rvprog.py -f bin/fm_radio.bin
 ```
 
 # Operating Instructions
