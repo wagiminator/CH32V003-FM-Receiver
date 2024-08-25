@@ -28,16 +28,18 @@ A low-cost SSD1306 4-pin I2C 128x64 pixels 0.96-inch OLED module is used as the 
 
 ![FM_Radio_Receiver_pic2.jpg](https://raw.githubusercontent.com/wagiminator/CH32V003-FM-Receiver/main/documentation/FM_Radio_Receiver_pic2.jpg)
 
-# Building Instructions
-Solder all components to the PCB. Place the 40mm speaker in the corresponding cutout on the board. Glue the speaker in place with hot glue. Make sure that the glue is airtight all around to achieve good sound quality. Solder the connection cables between speaker and board. Solder the wire antenna to the corresponding pad on the board. A 75cm (30" = λ / 4) long 28AWG flexible silicone insulated wire works very well.
+## Building Instructions
+1. Take the Gerber files (the *zip* file inside the *hardware* folder) and upload them to a PCB (printed circuit board) manufacturer of your choice (e.g., [JLCPCB](https://jlcpcb.com/)). They will use these files to create the circuit board for your device and send it to you.
+2. Once you have the PCB, you can start soldering the components onto it. Use the BOM (bill of materials) and schematic as a guide to make sure everything is connected correctly. You can find the corresponding files in the *hardware* folder. Remove the plastic part from the pin header of the OLED, trim the pins, and solder the OLED module flush onto the PCB.
+3. Place the 40mm speaker in the corresponding cutout on the board. Glue the speaker in place with hot glue. Make sure that the glue is airtight all around to achieve good sound quality. Solder the connection cables between speaker and board. Solder the wire antenna to the corresponding pad on the board. A 75cm (30" = λ / 4) long 28AWG flexible silicone insulated wire works very well.
 
 ![FM_Radio_Receiver_pic3.jpg](https://raw.githubusercontent.com/wagiminator/CH32V003-FM-Receiver/main/documentation/FM_Radio_Receiver_pic3.jpg)
 
-3D print the case. Cases with different heights are available in the "3dprint" folder. Choose the case that matches the height of your battery and speaker. Glue the battery into the case with double-sided tape. Thread the wire antenna through the small hole in the housing. To improve the sound quality, you can pack a foam mat between the battery and the PCB inside the case. This should fit snugly against the outer walls of the housing.
+4. To create the case for your device, use the *stl* files in the *3dprint* folder with your 3D printer. Cases with different heights are available. Choose the case that matches the height of your battery and speaker. Glue the battery into the case with double-sided tape. Thread the wire antenna through the small hole in the housing. To improve the sound quality, you can pack a foam mat between the battery and the PCB inside the case. This should fit snugly against the outer walls of the housing.
 
 ![FM_Radio_Receiver_pic4.jpg](https://raw.githubusercontent.com/wagiminator/CH32V003-FM-Receiver/main/documentation/FM_Radio_Receiver_pic4.jpg)
 
-Connect the battery to the JST connector on the board. Pay attention to the correct polarity, unfortunately there is no standard here! At the latest now you should upload the firmware (see below). Use the PROG pads on the board for this. Place the board on the case and screw it with four M2x5mm self-tapping screws.
+5. Connect the battery to the JST connector on the board. Pay attention to the correct polarity, unfortunately there is no standard here! At the latest now you should upload the firmware (see below). Use the PROG pads on the board for this. Place the board on the case and screw it with four M2x5mm self-tapping screws.
 
 ![FM_Radio_Receiver_pic5.jpg](https://raw.githubusercontent.com/wagiminator/CH32V003-FM-Receiver/main/documentation/FM_Radio_Receiver_pic5.jpg)
 
@@ -100,11 +102,6 @@ Switch off the FM Receiver or remove the battery. Connect the FM Receiver via th
 make flash
 ```
 
-If you want to just upload the pre-compiled binary, run the following command instead:
-```
-rvprog -f bin/fm_radio.bin
-```
-
 ### Other Operating Systems
 Follow the instructions on [CNLohr's ch32v003fun page](https://github.com/cnlohr/ch32v003fun/wiki/Installation) to set up the toolchain on your respective operating system (for Windows, use WSL). Also, install [Python3](https://www.pythontutorial.net/getting-started/install-python/) and [rvprog](https://pypi.org/project/rvprog/). Compile and upload with "make flash". Note that I only have Debian-based Linux and have not tested it on other operating systems.
 
@@ -119,6 +116,7 @@ WCH offers the free but closed-source software [WCH-LinkUtility](https://www.wch
 Alternatively, there is an open-source tool called [minichlink](https://github.com/cnlohr/ch32v003fun/tree/master/minichlink) developed by Charles Lohr (CNLohr). It can be used with Windows, Linux and Mac.
 
 If you have installed [Python3](https://www.pythontutorial.net/getting-started/install-python/) on your system, you can also use the platform-independent open-source command-line tool [rvprog](https://pypi.org/project/rvprog/) for uploading:
+
 ```
 rvprog -f bin/fm_radio.bin
 ```
